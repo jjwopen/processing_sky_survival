@@ -14,13 +14,13 @@ bg2X = 1080
 playerY = 270
 playerNum = 0
 spawnInterval = 700
-lastSpawnTime = 0
 obstaclesList = []
 gameOver = False
+obstacleSpeed = 10
 
 
 def setup():
-    global bg, player, obstacleImg, heart
+    global bg, player, obstacleImg, heart, lastSpawnTime
     size(1080, 540)
     # Image Load
     bg = loadImage("sky1.png")
@@ -32,6 +32,7 @@ def setup():
         obstacleImg.append(loadImage("obs{}.png".format(i)))
     heart = loadImage("heart.png")
     
+    lastSpawnTime = millis()
         
 def draw():
     global window
@@ -41,8 +42,7 @@ def draw():
         game()
         
         
-
-                
+        
 def start():
     global window, bgColorList, bgColor, level, score, bestScore, gameOver, life, reStart
     
@@ -51,11 +51,11 @@ def start():
     # Title
     textSize(70)
     textAlign(CENTER)
-    if bgColor in [0,3,4]: # Changing Text Color by Background Color
+    if bgColor in [0,3,4]:
         fill(0)
     else:
         fill(255)
-    text("Sky Survial", width/2, 200)
+    text("Sky Survival", width/2, 200)
     
     # Score
     textSize(30)
@@ -79,6 +79,7 @@ def start():
     
     # Background Color
     for i in range(8):
+        rectMode(CENTER)
         fill(bgColorList[i][0], bgColorList[i][1], bgColorList[i][2])
         rect(700+40*i, 450, 30, 30)
     
@@ -99,12 +100,14 @@ def start():
 
     
 def game():
-    global bg, bg1X, bg2X, window, level, score, bestScore, playerY, player, playerNum, obstacleImg, heart, obstaclesList, lastSpawnTime, spawnInterval, gameOver, life, reStart
-
+    global bg, bgColor, bgColorList, bg1X, bg2X, window, level, score, bestScore, playerY, player, playerNum, obstacleImg, heart, obstaclesList, obstacleSpeed, lastSpawnTime, spawnInterval, gameOver, life, reStart
+    
     # Background
     imageMode(CORNER)
+    tint(bgColorList[bgColor][0], bgColorList[bgColor][1], bgColorList[bgColor][2])
     image(bg, bg1X, 0, 1080, 675)
     image(bg, bg2X, 0, 1080, 675)
+    noTint()
     if not gameOver:
         bg1X -= 5
         bg2X -= 5
@@ -113,11 +116,10 @@ def game():
         if bg2X <= -1080:
             bg2X = 1080
         score += 1 # Score
-    for i in range(life):
-        image(heart, 50+50*i, 50)
-    # Score Text
     textSize(30)
     fill(0)
+    for i in range(life):
+        image(heart, 50+50*i, 50)
     text("score: {}".format(score), 100, 120)
     
     # Reset
@@ -129,6 +131,8 @@ def game():
         reStart = False
         gameOver = False
         obstaclesList = []
+        obstacleSpeed = 10 + 5 * (level-1)
+        spawnInterval = 700
     
     # Player
     if not gameOver:
@@ -142,23 +146,26 @@ def game():
             playerY += 8
 
     # Obstacles
+    spawnInterval -= 0.01
+    obstacleSpeed += 0.01
     if not gameOver and millis() - lastSpawnTime > spawnInterval:
         obstaclesList.append({'img': int(random(0,3)), 'x': width+50, 'y': random(50, 490), 'isCollided': False})
         lastSpawnTime = millis()
 
     for i in obstaclesList:
         if not gameOver:
-            i['x'] -= 10 + 5 * (level-1) # Speed Variation by Level
-        image(obstacleImg[i['img']], i['x'], i['y'], 50*obstacleImg[i['img']].width/obstacleImg[i['img']].height, 50) # Show Obstacles
-        # image(obstacleImg[i['img']], i['x'], i['y']) # Show Obstacles
+            # i['x'] -= 10 + 5 * (level-1)
+            i['x'] -= obstacleSpeed
+        image(obstacleImg[i['img']], i['x'], i['y'], 50*obstacleImg[i['img']].width/obstacleImg[i['img']].height, 50)
         
-        # Collision
         if ( 50 < i['x'] - (50*obstacleImg[i['img']].width/obstacleImg[i['img']].height)/2 < 100 ) and ( playerY-50 < i['y']+25 < playerY+50 or playerY-50 < i['y']-25 < playerY+50 ) and i['isCollided'] == False:
+            # if playerY-50 < i['y'] < playerY+50:
+            #     if i['isCollided'] == False:
             i['isCollided'] = True
             life -= 1
             i['x'] = -50
         
-    obstaclesList = [i for i in obstaclesList if i['x'] > -100] # Show Obstacles When they are in screen
+    obstaclesList = [i for i in obstaclesList if i['x'] > -obstacleImg[i['img']].width] # Show Obstacles When they are in screen
 
 
     # Game Over
@@ -166,20 +173,17 @@ def game():
         gameOver = True
 
     if gameOver:
-        filter(GRAY) # Grayscale
-        # Text
+        filter(GRAY)
         textSize(70)
         fill(0)
         text("Game Over", width/2, height/2)
-        # Button
         textSize(30)
         noFill()
         strokeWeight(3)
         rect(410, 440, 100, 100)
         rect(670, 440, 100, 100)
-        text("Menu", 410, 445)
-        text("Restart", 670, 445)
-        # Button Pressed
+        text("Menu", 540-130, 445)
+        text("Restart", 540+130, 445)
         if mousePressed and 390 <= mouseY <= 490:
             if 360 <= mouseX <= 460:
                 window = 0
